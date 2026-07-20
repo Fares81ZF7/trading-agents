@@ -10,7 +10,7 @@ import analyse
 import mailer
 
 
-TOP_CANDIDATS = 12  # nb de candidats achat envoyes a Claude apres screening momentum
+TOP_CANDIDATS = 8  # nb de candidats achat envoyes a Claude apres screening momentum
 
 
 def main():

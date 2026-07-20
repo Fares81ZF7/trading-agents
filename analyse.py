@@ -129,37 +129,41 @@ def analyser(cash: dict, candidats: list[dict], positions: list[dict], theses: d
 
     messages = [{"role": "user", "content": user_msg}]
 
-    # Boucle : on laisse le modele faire ses web_search, puis on force l'outil final.
-    for _ in range(6):
-        resp = client.messages.create(
-            model=MODEL,
-            max_tokens=4000,
-            system=SYSTEM,
-            tools=[
-                {"type": "web_search_20250305", "name": "web_search", "max_uses": 8},
+    # Phase 1 : le modele peut faire ses web_search (quelques tours max).
+    # Phase 2 : on FORCE l'appel de l'outil final via tool_choice.
+    MAX_TOURS = 5
+    for tour in range(MAX_TOURS):
+        force = tour >= MAX_TOURS - 1  # au dernier tour, on force l'outil
+        kwargs = {
+            "model": MODEL,
+            "max_tokens": 8000,
+            "system": SYSTEM,
+            "messages": messages,
+        }
+        if force:
+            # On retire web_search et on impose enregistrer_recommandations
+            kwargs["tools"] = [TOOL]
+            kwargs["tool_choice"] = {"type": "tool", "name": "enregistrer_recommandations"}
+        else:
+            kwargs["tools"] = [
+                {"type": "web_search_20250305", "name": "web_search", "max_uses": 4},
                 TOOL,
-            ],
-            messages=messages,
-        )
+            ]
 
-        # Cherche un appel a notre outil final
+        resp = client.messages.create(**kwargs)
+
         for block in resp.content:
             if block.type == "tool_use" and block.name == "enregistrer_recommandations":
-                return block.input
+                r = block.input
+                print(f"[analyse] outil appele au tour {tour}: "
+                      f"{len(r.get('achats', []))} achats, {len(r.get('ventes', []))} ventes")
+                return r
 
-        # Sinon on rejoue le tour (web_search gere cote serveur, on ajoute la reponse et on relance)
         messages.append({"role": "assistant", "content": resp.content})
-        if resp.stop_reason == "tool_use":
-            # web search server-side : on relance en demandant la conclusion
-            messages.append({
-                "role": "user",
-                "content": "Termine : appelle maintenant enregistrer_recommandations avec ta decision finale.",
-            })
-        else:
-            messages.append({
-                "role": "user",
-                "content": "Appelle enregistrer_recommandations avec ta decision finale.",
-            })
+        messages.append({
+            "role": "user",
+            "content": "Termine maintenant : appelle enregistrer_recommandations avec ta decision finale.",
+        })
 
-    # Fallback vide si le modele n'a jamais appele l'outil
+    print("[analyse] AUCUN appel d'outil apres forcage - fallback vide")
     return {"achats": [], "ventes": [], "synthese_macro": "Aucune recommandation generee."}
