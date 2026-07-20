@@ -26,6 +26,8 @@ Regles imperatives :
 - Achats uniquement si le cash disponible de la plateforme le permet.
 - Ventes uniquement sur les positions reellement detenues fournies.
 - Montants d'achat/vente proposes : nombres entiers (tronques), en euros.
+- Quantite (qty) : nombre entier de titres = montant propose divise par le cours actuel du titre
+  (cours fourni dans les indicateurs, champ "cours", converti en euros si besoin selon "devise"), arrondi a l'entier.
 - Coherence avec les theses precedentes fournies : ne te contredis pas sans motif explicite dans la justification.
 - Analyse 360 : fondamentale, technique, macro, geopolitique, sentiment.
 
@@ -33,11 +35,11 @@ Tu reponds STRICTEMENT en JSON valide, sans texte autour, au format :
 {
   "achats": [
     {"ticker": "...", "nom": "...", "plateforme": "DEGIRO|Shares", "conviction": "Faible|Moyenne|Forte",
-     "montant_propose": 0, "justification": "..."}
+     "montant_propose": 0, "qty": 0, "justification": "..."}
   ],
   "ventes": [
     {"ticker": "...", "nom": "...", "plateforme": "DEGIRO|Shares", "conviction": "Faible|Moyenne|Forte",
-     "montant_propose": 0, "justification": "..."}
+     "montant_propose": 0, "qty": 0, "justification": "..."}
   ],
   "synthese_macro": "2-3 phrases de contexte marche du jour"
 }"""

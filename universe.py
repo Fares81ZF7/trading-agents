@@ -8,7 +8,7 @@ On elargira (emergents, small caps) apres la phase de rodage.
 # Positions actuellement detenues (toujours analysees, quel que soit le screen)
 POSITIONS_DETENUES = [
     {"ticker": "EH", "nom": "EHang Holdings (ADR)", "plateforme": "DEGIRO"},
-    {"ticker": "ATA.PA", "nom": "Atari SA", "plateforme": "DEGIRO"},
+    {"ticker": "ALATA.PA", "nom": "Atari SA", "plateforme": "DEGIRO"},
     {"ticker": "SGLD.L", "nom": "S&P Gold", "plateforme": "Shares"},
     {"ticker": "DH2O.L", "nom": "S&P Global Water 50", "plateforme": "Shares"},
 ]

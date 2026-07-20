@@ -84,9 +84,9 @@ def lire_historique() -> list[dict]:
                 "action": _select(p, "Action"),
                 "conviction": _select(p, "Conviction"),
                 "justification": _txt(p, "Justification"),
-                "montant_propose": _num(p, "Montant proposé (€)"),
-                "montant_execute": _num(p, "Montant exécuté (€)"),
-                "frais": _num(p, "Frais (€)"),
+                "montant_propose": _num(p, "Montant proposé"),
+                "montant_execute": _num(p, "Montant exécuté"),
+                "frais": _num(p, "Frais"),
                 "statut": _select(p, "Statut"),
             })
         if not resp.get("has_more"):
@@ -138,5 +138,7 @@ def ecrire_reco(reco: dict):
     if reco.get("plateforme"):
         props["Plateforme"] = {"select": {"name": reco["plateforme"]}}
     if reco.get("montant_propose") is not None:
-        props["Montant proposé (€)"] = {"number": reco["montant_propose"]}
+        props["Montant proposé"] = {"number": reco["montant_propose"]}
+    if reco.get("qty") is not None:
+        props["Qty"] = {"number": reco["qty"]}
     notion.pages.create(parent={"type": "data_source_id", "data_source_id": ds}, properties=props)
