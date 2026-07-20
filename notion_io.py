@@ -1,23 +1,20 @@
 """
 Lecture / ecriture Notion (API data_sources 2025-09-03+).
-- Lit l'historique (positions Initial + transactions Executees) pour reconstituer
-  le cash disponible reel et l'historique des theses par ticker.
-- Ecrit les nouvelles recommandations du jour (Statut = Propose).
+Robuste a la normalisation Unicode des noms de proprietes (e accentue).
 """
 
 import os
+import unicodedata
 from datetime import date
 from notion_client import Client
 
 NOTION_TOKEN = os.environ["NOTION_TOKEN"]
 DATABASE_ID = os.environ["NOTION_DATABASE_ID"]
 
-# Cash de depart hors positions (renseigne au cadrage)
 CASH_INITIAL = {"DEGIRO": 54.0, "Shares": 3.0}
 
 notion = Client(auth=NOTION_TOKEN)
 
-# Resolution de l'ID data source (1 database = 1+ data sources depuis l'API 2025-09-03)
 _DS_ID = None
 
 
@@ -31,24 +28,45 @@ def _data_source_id() -> str:
     return _DS_ID
 
 
-def _txt(prop):
+def _norm(s: str) -> str:
+    return unicodedata.normalize("NFC", s)
+
+
+def _prop(props: dict, nom: str):
+    """Recupere une propriete par nom, insensible a la normalisation Unicode."""
+    cible = _norm(nom)
+    for k, v in props.items():
+        if _norm(k) == cible:
+            return v
+    return {}
+
+
+def _txt(props, nom):
+    p = _prop(props, nom)
     try:
-        return "".join(t["plain_text"] for t in prop["rich_text"])
+        return "".join(t["plain_text"] for t in p["rich_text"])
     except Exception:
         return ""
 
 
-def _num(prop):
-    return prop.get("number")
+def _title(props, nom):
+    p = _prop(props, nom)
+    try:
+        return "".join(t["plain_text"] for t in p["title"])
+    except Exception:
+        return ""
 
 
-def _select(prop):
-    v = prop.get("select")
+def _num(props, nom):
+    return _prop(props, nom).get("number")
+
+
+def _select(props, nom):
+    v = _prop(props, nom).get("select")
     return v["name"] if v else None
 
 
 def lire_historique() -> list[dict]:
-    """Retourne toutes les lignes de la base sous forme de dicts simples."""
     ds = _data_source_id()
     lignes = []
     cursor = None
@@ -60,16 +78,16 @@ def lire_historique() -> list[dict]:
         for page in resp["results"]:
             p = page["properties"]
             lignes.append({
-                "ticker": "".join(t["plain_text"] for t in p["Ticker"]["title"]),
-                "nom": _txt(p["Nom"]),
-                "plateforme": _select(p["Plateforme"]),
-                "action": _select(p["Action"]),
-                "conviction": _select(p["Conviction"]),
-                "justification": _txt(p["Justification"]),
-                "montant_propose": _num(p["Montant proposé (€)"]),
-                "montant_execute": _num(p["Montant exécuté (€)"]),
-                "frais": _num(p["Frais (€)"]),
-                "statut": _select(p["Statut"]),
+                "ticker": _title(p, "Ticker"),
+                "nom": _txt(p, "Nom"),
+                "plateforme": _select(p, "Plateforme"),
+                "action": _select(p, "Action"),
+                "conviction": _select(p, "Conviction"),
+                "justification": _txt(p, "Justification"),
+                "montant_propose": _num(p, "Montant proposé (€)"),
+                "montant_execute": _num(p, "Montant exécuté (€)"),
+                "frais": _num(p, "Frais (€)"),
+                "statut": _select(p, "Statut"),
             })
         if not resp.get("has_more"):
             break
@@ -78,7 +96,6 @@ def lire_historique() -> list[dict]:
 
 
 def calculer_cash(lignes: list[dict]) -> dict:
-    """Cash dispo par plateforme = cash initial + ventes executees - achats executes - frais."""
     cash = dict(CASH_INITIAL)
     for l in lignes:
         if l["statut"] != "Exécuté":
@@ -88,7 +105,7 @@ def calculer_cash(lignes: list[dict]) -> dict:
             continue
         montant = l["montant_execute"] or 0
         frais = l["frais"] or 0
-        if l["action"] in ("Vendre",):
+        if l["action"] == "Vendre":
             cash[plt] += montant - frais
         elif l["action"] in ("Acheter", "Renforcer"):
             cash[plt] -= montant + frais
@@ -96,18 +113,18 @@ def calculer_cash(lignes: list[dict]) -> dict:
 
 
 def theses_par_ticker(lignes: list[dict]) -> dict:
-    """Derniere justification connue par ticker, pour eviter les contradictions."""
     out = {}
     for l in lignes:
-        t = l["ticker"]
         if l["justification"]:
-            out[t] = {"action": l["action"], "justification": l["justification"], "statut": l["statut"]}
+            out[l["ticker"]] = {
+                "action": l["action"],
+                "justification": l["justification"],
+                "statut": l["statut"],
+            }
     return out
 
 
 def ecrire_reco(reco: dict):
-    """Ecrit une recommandation du jour. reco contient :
-    ticker, nom, plateforme, action, conviction, justification, montant_propose."""
     ds = _data_source_id()
     props = {
         "Ticker": {"title": [{"text": {"content": reco["ticker"]}}]},
