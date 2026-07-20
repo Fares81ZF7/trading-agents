@@ -12,6 +12,58 @@ import mailer
 
 TOP_CANDIDATS = 8  # nb de candidats achat envoyes a Claude apres screening momentum
 
+_ORDRE_CONVICTION = {"Forte": 3, "Moyenne": 2, "Faible": 1}
+
+
+def _borne_achats(achats: list[dict], ventes: list[dict], cash: dict) -> list[dict]:
+    """Borne les achats par le cash projete de CHAQUE plateforme.
+    cash projete = cash actuel + somme des ventes proposees sur la plateforme.
+    Traitement par conviction decroissante : les achats forts servis en premier,
+    les faibles tronques/supprimes en dernier. Troncature au prorata du cash restant.
+    Un achat dont la quantite tombe a 0 est supprime. Solde final garanti >= 0."""
+    # Cash projete par plateforme
+    projete = dict(cash)
+    for v in ventes:
+        plt = v.get("plateforme")
+        if plt in projete:
+            projete[plt] += v.get("montant_propose") or 0
+
+    # Tri par conviction decroissante (Forte d'abord)
+    ordonnes = sorted(
+        achats,
+        key=lambda a: _ORDRE_CONVICTION.get(a.get("conviction", "Faible"), 1),
+        reverse=True,
+    )
+
+    retenus = []
+    for a in ordonnes:
+        plt = a.get("plateforme")
+        dispo = projete.get(plt, 0)
+        montant = a.get("montant_propose") or 0
+        qty = a.get("qty") or 0
+
+        if dispo <= 0 or montant <= 0 or qty <= 0:
+            continue  # plus de cash sur cette plateforme : achat supprime
+
+        if montant <= dispo:
+            # tient entierement
+            projete[plt] = dispo - montant
+            retenus.append(a)
+        else:
+            # troncature : on reduit la quantite pour tenir dans le cash restant
+            prix_unitaire = montant / qty
+            qty_max = int(dispo // prix_unitaire)
+            if qty_max <= 0:
+                continue  # meme un titre ne rentre pas : supprime
+            a["qty"] = qty_max
+            a["montant_propose"] = int(qty_max * prix_unitaire)
+            a["justification"] = (a.get("justification", "") +
+                                  " (Quantite ajustee au cash disponible.)")
+            projete[plt] = dispo - a["montant_propose"]
+            retenus.append(a)
+
+    return retenus
+
 
 def main():
     # 1. Etat portefeuille et cash reel depuis Notion
@@ -64,6 +116,13 @@ def main():
     # 5. Plafonnement de securite a 5 (au cas ou)
     reco["achats"] = (reco.get("achats") or [])[:5]
     reco["ventes"] = (reco.get("ventes") or [])[:5]
+
+    # 5bis. GARDE-FOU CASH (deterministe, non negociable) :
+    #   cash projete par plateforme = cash actuel + ventes proposees de cette plateforme.
+    #   Les achats sont bornes par ce cash projete. Si un achat depasse le disponible,
+    #   on le TRONQUE (reduction de quantite) ; si la quantite tombe a 0, on le supprime.
+    #   On rogne en priorite les convictions les plus faibles.
+    reco["achats"] = _borne_achats(reco["achats"], reco["ventes"], cash)
 
     # 6. Email
     html = mailer.construire_html(reco, cash)
