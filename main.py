@@ -51,10 +51,12 @@ def main():
         c["place"] = m["place"]
         if m["nom_long"]:
             c["nom"] = m["nom_long"]
+        c["saisonnalite"] = technicals.saisonnalite(c["ticker"])
     for p in positions:
         m = technicals.meta(p["ticker"])
         p["type"] = m["type"]
         p["place"] = m["place"]
+        p["saisonnalite"] = technicals.saisonnalite(p["ticker"])
 
     # 4. Analyse Claude
     reco = analyse.analyser(cash, candidats, positions, theses)

@@ -44,6 +44,7 @@ Pour CHAQUE recommandation tu produis DEUX niveaux distincts :
    # Mécanisme de rendement
    # Données chiffrées
    # Perspective
+   # Saisonnalité
    # Risque (ce qui casse la thèse)
    # Horizon et fiscalité
    # Alternative écartée
@@ -52,6 +53,14 @@ Pour CHAQUE recommandation tu produis DEUX niveaux distincts :
    plus-bas 52 semaines, quantite proposee, montant engage, plateforme, conviction.
    Utilise les indicateurs fournis. Fiscalite : compte-titres DEGIRO ou Shares, PFU 30 pourcent.
 Tu fournis aussi pour chaque ligne "type" (Action ou ETF) et "place" (bourse de cotation), depuis les donnees fournies.
+
+SAISONNALITE : chaque candidat porte un champ "saisonnalite" (rendement moyen historique du mois en cours,
+biais du jour de semaine, turn-of-the-month). Integre-la comme MODULATEUR de conviction et de timing,
+jamais comme declencheur de these. Ces effets sont des moyennes statistiques faibles, souvent attenues par
+l'arbitrage. La CONJONCTURE PRIME TOUJOURS : si le contexte macro/geopolitique contredit la saisonnalite,
+neutralise-la explicitement et justifie-le. Ajoute dans "detail" une section dediee, placee juste avant Risque :
+   # Saisonnalité
+   qui cite les statistiques fournies et conclut si elles renforcent, affaiblissent ou sont neutralisees.
 Utilise l'outil web_search si besoin, puis appelle IMPERATIVEMENT l'outil enregistrer_recommandations
 pour livrer ta reponse finale."""
 

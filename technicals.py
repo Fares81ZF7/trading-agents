@@ -73,6 +73,49 @@ def meta(ticker: str) -> dict:
     return out
 
 
+def saisonnalite(ticker: str) -> dict:
+    """Statistiques saisonnieres calculees sur 10 ans d'historique.
+    - rendement moyen du mois calendaire en cours (favorable/defavorable)
+    - rendement moyen par jour de semaine, et biais du jour courant
+    - effet turn-of-the-month (5 derniers / 3 premiers jours ouvres)
+    Best effort : renvoie des None si pas assez d'historique."""
+    import datetime as _dt
+    out = {
+        "mois_courant": None, "rdt_moyen_mois_pct": None,
+        "jour_courant": None, "rdt_moyen_jour_pct": None,
+        "turn_of_month": None,
+    }
+    try:
+        hist = yf.Ticker(ticker).history(period="10y", interval="1d")
+        if hist is None or len(hist) < 250:
+            return out
+        closes = hist["Close"].dropna()
+        rdt = closes.pct_change().dropna()
+        idx = rdt.index
+
+        # Mois en cours
+        mois = _dt.date.today().month
+        m_mask = idx.month == mois
+        if m_mask.any():
+            out["mois_courant"] = mois
+            out["rdt_moyen_mois_pct"] = round(float(rdt[m_mask].mean()) * 100 * 21, 2)  # approx mensuel
+
+        # Jour de semaine courant (0=lundi)
+        jour = _dt.date.today().weekday()
+        j_mask = idx.weekday == jour
+        if j_mask.any() and jour < 5:
+            noms = ["lundi", "mardi", "mercredi", "jeudi", "vendredi"]
+            out["jour_courant"] = noms[jour]
+            out["rdt_moyen_jour_pct"] = round(float(rdt[j_mask].mean()) * 100, 3)
+
+        # Turn of the month : jour du mois <=3 ou >=26
+        today = _dt.date.today().day
+        out["turn_of_month"] = bool(today <= 3 or today >= 26)
+    except Exception:
+        pass
+    return out
+
+
 def _devise(ticker: str) -> str:
     if ticker.endswith((".PA", ".AS", ".DE", ".MI")):
         return "EUR"
