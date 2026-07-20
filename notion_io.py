@@ -1,5 +1,5 @@
 """
-Lecture / ecriture Notion.
+Lecture / ecriture Notion (API data_sources 2025-09-03+).
 - Lit l'historique (positions Initial + transactions Executees) pour reconstituer
   le cash disponible reel et l'historique des theses par ticker.
 - Ecrit les nouvelles recommandations du jour (Statut = Propose).
@@ -16,6 +16,19 @@ DATABASE_ID = os.environ["NOTION_DATABASE_ID"]
 CASH_INITIAL = {"DEGIRO": 54.0, "Shares": 3.0}
 
 notion = Client(auth=NOTION_TOKEN)
+
+# Resolution de l'ID data source (1 database = 1+ data sources depuis l'API 2025-09-03)
+_DS_ID = None
+
+
+def _data_source_id() -> str:
+    global _DS_ID
+    if _DS_ID:
+        return _DS_ID
+    db = notion.databases.retrieve(database_id=DATABASE_ID)
+    sources = db.get("data_sources") or []
+    _DS_ID = sources[0]["id"] if sources else DATABASE_ID
+    return _DS_ID
 
 
 def _txt(prop):
@@ -36,13 +49,14 @@ def _select(prop):
 
 def lire_historique() -> list[dict]:
     """Retourne toutes les lignes de la base sous forme de dicts simples."""
+    ds = _data_source_id()
     lignes = []
     cursor = None
     while True:
-        kwargs = {"database_id": DATABASE_ID, "page_size": 100}
+        kwargs = {"data_source_id": ds, "page_size": 100}
         if cursor:
             kwargs["start_cursor"] = cursor
-        resp = notion.databases.query(**kwargs)
+        resp = notion.data_sources.query(**kwargs)
         for page in resp["results"]:
             p = page["properties"]
             lignes.append({
@@ -94,6 +108,7 @@ def theses_par_ticker(lignes: list[dict]) -> dict:
 def ecrire_reco(reco: dict):
     """Ecrit une recommandation du jour. reco contient :
     ticker, nom, plateforme, action, conviction, justification, montant_propose."""
+    ds = _data_source_id()
     props = {
         "Ticker": {"title": [{"text": {"content": reco["ticker"]}}]},
         "Nom": {"rich_text": [{"text": {"content": reco.get("nom", "")}}]},
@@ -107,4 +122,4 @@ def ecrire_reco(reco: dict):
         props["Plateforme"] = {"select": {"name": reco["plateforme"]}}
     if reco.get("montant_propose") is not None:
         props["Montant proposé (€)"] = {"number": reco["montant_propose"]}
-    notion.pages.create(parent={"database_id": DATABASE_ID}, properties=props)
+    notion.pages.create(parent={"type": "data_source_id", "data_source_id": ds}, properties=props)
