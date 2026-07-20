@@ -1,0 +1,32 @@
+name: Rapport quotidien Poche 2
+
+on:
+  schedule:
+    # 7h00 Europe/Paris = 05h00 UTC (ete) / 06h00 UTC (hiver).
+    # GitHub Actions ne gere pas les fuseaux : on met 05h00 UTC.
+    # En hiver (heure d'hiver), le rapport arrivera a 6h00 Paris.
+    - cron: "0 5 * * *"
+  workflow_dispatch:  # permet un lancement manuel depuis l'onglet Actions
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Installer les dependances
+        run: pip install -r requirements.txt
+
+      - name: Lancer l'agent
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
+          YAHOO_USER: ${{ secrets.YAHOO_USER }}
+          YAHOO_APP_PASSWORD: ${{ secrets.YAHOO_APP_PASSWORD }}
+          MAIL_DEST: ${{ secrets.MAIL_DEST }}
+        run: python main.py
