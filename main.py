@@ -8,6 +8,7 @@ import technicals
 import notion_io
 import analyse
 import mailer
+import gating
 
 
 TOP_CANDIDATS = 8  # nb de candidats achat envoyes a Claude apres screening momentum
@@ -66,6 +67,14 @@ def _borne_achats(achats: list[dict], ventes: list[dict], cash: dict) -> list[di
 
 
 def main():
+    # 0. GATING (gratuit, en amont) : agent actif ? pause ? jour de bourse ?
+    #    Si non, on s'arrete AVANT tout appel Claude / web search.
+    g = gating.decision()
+    if not g["run"]:
+        print(f"[gating] Pas d'execution aujourd'hui : {g['raison']}")
+        return
+    print(f"[gating] Zones ouvertes : {g['zones_ouvertes']}")
+
     # 1. Etat portefeuille et cash reel depuis Notion
     lignes = notion_io.lire_historique()
     cash = notion_io.calculer_cash(lignes)
@@ -85,9 +94,12 @@ def main():
             ind["qty_detenue"] = qte_detenue.get(p["ticker_notion"], 0)
             positions.append(ind)
 
-    # 3. Screening momentum de l'univers de chasse
+    # 3. Screening momentum de l'univers de chasse (limite aux zones ouvertes)
+    zones = set(g["zones_ouvertes"])
+    univers = [t for t in universe.UNIVERS_CHASSE if universe.zone_ticker(t) in zones]
+    print(f"{len(univers)} tickers dans l'univers apres filtre zones")
     scored = []
-    for t in universe.UNIVERS_CHASSE:
+    for t in univers:
         ind = technicals.indicateurs(t)
         if ind:
             ind["score"] = technicals.score_momentum(ind)

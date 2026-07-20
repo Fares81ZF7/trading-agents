@@ -34,3 +34,12 @@ UNIVERS_ETF = [
 ]
 
 UNIVERS_CHASSE = UNIVERS_ACTIONS_US + UNIVERS_ACTIONS_EUROPE + UNIVERS_ETF
+
+
+def zone_ticker(ticker: str) -> str:
+    """Zone de marche d'un ticker, pour filtrer selon les bourses ouvertes."""
+    if ticker.endswith((".PA", ".AS", ".DE", ".MI", ".SW")):
+        return "Europe"
+    if ticker.endswith(".L"):
+        return "UK"
+    return "US"
