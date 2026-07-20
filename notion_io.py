@@ -87,6 +87,7 @@ def lire_historique() -> list[dict]:
                 "montant_propose": _num(p, "Montant proposé"),
                 "montant_execute": _num(p, "Montant exécuté"),
                 "frais": _num(p, "Frais"),
+                "qty": _num(p, "Qty"),
                 "statut": _select(p, "Statut"),
             })
         if not resp.get("has_more"):
@@ -122,6 +123,27 @@ def theses_par_ticker(lignes: list[dict]) -> dict:
                 "statut": l["statut"],
             }
     return out
+
+
+def quantites_detenues(lignes: list[dict]) -> dict:
+    """Quantite nette detenue par ticker Notion.
+    Base = lignes 'Initial'. Ajustee par les transactions 'Execute'
+    (achat/renforcement +qty, vente -qty)."""
+    qte = {}
+    # Base : positions initiales
+    for l in lignes:
+        if l["statut"] == "Initial" and l.get("qty"):
+            qte[l["ticker"]] = qte.get(l["ticker"], 0) + l["qty"]
+    # Ajustements par transactions executees
+    for l in lignes:
+        if l["statut"] != "Exécuté" or not l.get("qty"):
+            continue
+        t = l["ticker"]
+        if l["action"] == "Vendre":
+            qte[t] = qte.get(t, 0) - l["qty"]
+        elif l["action"] in ("Acheter", "Renforcer"):
+            qte[t] = qte.get(t, 0) + l["qty"]
+    return {k: v for k, v in qte.items() if v > 0}
 
 
 def ecrire_reco(reco: dict):

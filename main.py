@@ -18,15 +18,19 @@ def main():
     lignes = notion_io.lire_historique()
     cash = notion_io.calculer_cash(lignes)
     theses = notion_io.theses_par_ticker(lignes)
+    qte_detenue = notion_io.quantites_detenues(lignes)
     print("Cash disponible:", cash)
+    print("Quantites detenues:", qte_detenue)
 
-    # 2. Indicateurs techniques des positions detenues
+    # 2. Indicateurs techniques des positions detenues (+ quantite reelle)
     positions = []
     for p in universe.POSITIONS_DETENUES:
         ind = technicals.indicateurs(p["ticker"])
         if ind:
             ind["nom"] = p["nom"]
             ind["plateforme"] = p["plateforme"]
+            ind["ticker_notion"] = p["ticker_notion"]
+            ind["qty_detenue"] = qte_detenue.get(p["ticker_notion"], 0)
             positions.append(ind)
 
     # 3. Screening momentum de l'univers de chasse

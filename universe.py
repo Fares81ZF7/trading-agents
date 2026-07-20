@@ -6,11 +6,12 @@ On elargira (emergents, small caps) apres la phase de rodage.
 """
 
 # Positions actuellement detenues (toujours analysees, quel que soit le screen)
+# ticker_yf = symbole yfinance (cours) ; ticker_notion = titre de la ligne Notion (quantite)
 POSITIONS_DETENUES = [
-    {"ticker": "EH", "nom": "EHang Holdings (ADR)", "plateforme": "DEGIRO"},
-    {"ticker": "ALATA.PA", "nom": "Atari SA", "plateforme": "DEGIRO"},
-    {"ticker": "SGLD.L", "nom": "S&P Gold", "plateforme": "Shares"},
-    {"ticker": "DH2O.L", "nom": "S&P Global Water 50", "plateforme": "Shares"},
+    {"ticker": "EH", "ticker_notion": "EHANG", "nom": "EHang Holdings (ADR)", "plateforme": "DEGIRO"},
+    {"ticker": "ALATA.PA", "ticker_notion": "ATA", "nom": "Atari SA", "plateforme": "DEGIRO"},
+    {"ticker": "SGLD.L", "ticker_notion": "SGLD", "nom": "S&P Gold", "plateforme": "Shares"},
+    {"ticker": "DH2O.L", "ticker_notion": "SGW50", "nom": "S&P Global Water 50", "plateforme": "Shares"},
 ]
 
 # Univers de chasse (achats potentiels). Liste courte de valeurs liquides + ETF momentum.
