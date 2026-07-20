@@ -88,6 +88,7 @@ def lire_historique() -> list[dict]:
                 "montant_execute": _num(p, "Montant exécuté"),
                 "frais": _num(p, "Frais"),
                 "qty": _num(p, "Qty"),
+                "ordre": _num(p, "Ordre"),
                 "statut": _select(p, "Statut"),
             })
         if not resp.get("has_more"):
@@ -146,12 +147,45 @@ def quantites_detenues(lignes: list[dict]) -> dict:
     return {k: v for k, v in qte.items() if v > 0}
 
 
-def ecrire_reco(reco: dict):
+def max_ordre(lignes: list[dict]) -> int:
+    """Plus grand numero d'ordre existant (0 si aucun)."""
+    vals = [int(l["ordre"]) for l in lignes if l.get("ordre") is not None]
+    return max(vals) if vals else 0
+
+
+def page_dernier_ordre():
+    """Retourne (page_id, ordre) de la ligne au plus grand Ordre, ou (None, 0).
+    Sert a poser le Solde execute recalcule sur la derniere ligne existante."""
+    ds = _data_source_id()
+    best_id, best_ordre = None, -1
+    cursor = None
+    while True:
+        kwargs = {"data_source_id": ds, "page_size": 100}
+        if cursor:
+            kwargs["start_cursor"] = cursor
+        resp = notion.data_sources.query(**kwargs)
+        for page in resp["results"]:
+            o = _num(page["properties"], "Ordre")
+            if o is not None and o > best_ordre:
+                best_ordre, best_id = int(o), page["id"]
+        if not resp.get("has_more"):
+            break
+        cursor = resp["next_cursor"]
+    return best_id, best_ordre
+
+
+def maj_solde_execute(page_id: str, solde: float):
+    """Ecrit le Solde execute sur une ligne existante."""
+    notion.pages.update(page_id=page_id, properties={"Solde exécuté": {"number": round(solde)}})
+
+
+def ecrire_reco(reco: dict, ordre: int, solde_propose: float | None = None):
     ds = _data_source_id()
     props = {
         "Ticker": {"title": [{"text": {"content": reco["ticker"]}}]},
         "Nom": {"rich_text": [{"text": {"content": reco.get("nom", "")}}]},
         "Date": {"date": {"start": date.today().isoformat()}},
+        "Ordre": {"number": ordre},
         "Action": {"select": {"name": reco["action"]}},
         "Conviction": {"select": {"name": reco["conviction"]}},
         "Justification": {"rich_text": [{"text": {"content": reco["justification"][:1900]}}]},
@@ -163,4 +197,6 @@ def ecrire_reco(reco: dict):
         props["Montant proposé"] = {"number": reco["montant_propose"]}
     if reco.get("qty") is not None:
         props["Qty"] = {"number": reco["qty"]}
+    if solde_propose is not None:
+        props["Solde proposé"] = {"number": round(solde_propose)}
     notion.pages.create(parent={"type": "data_source_id", "data_source_id": ds}, properties=props)

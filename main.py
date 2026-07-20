@@ -56,13 +56,35 @@ def main():
     mailer.envoyer(html)
     print("Email envoye")
 
-    # 7. Ecriture Notion (une ligne par reco)
-    for r in reco["achats"]:
-        r["action"] = "Acheter"
-        notion_io.ecrire_reco(r)
-    for r in reco["ventes"]:
-        r["action"] = "Vendre"
-        notion_io.ecrire_reco(r)
+    # 7. Maj du Solde execute (cash reel) sur la derniere ligne existante,
+    #    a partir des transactions reellement executees (recalcul du lendemain).
+    cash_reel = round(sum(cash.values()))
+    pid, _ord = notion_io.page_dernier_ordre()
+    if pid:
+        notion_io.maj_solde_execute(pid, cash_reel)
+
+    # 8. Ecriture Notion (une ligne par reco), ordre incremental continu.
+    #    Ventes d'abord (elles alimentent le cash), puis achats.
+    #    Le solde propose = cash de depart + ventes proposees - achats proposes,
+    #    ecrit uniquement sur la derniere ligne du jour (Ordre le plus grand).
+    ordre = notion_io.max_ordre(lignes)
+    total_cash = round(sum(cash.values()))
+
+    ventes = reco["ventes"]
+    achats = reco["achats"]
+    for r in ventes:
+        total_cash += r.get("montant_propose") or 0
+    for r in achats:
+        total_cash -= r.get("montant_propose") or 0
+    solde_final = total_cash
+
+    sequence = [("Vendre", r) for r in ventes] + [("Acheter", r) for r in achats]
+    n = len(sequence)
+    for i, (action, r) in enumerate(sequence):
+        ordre += 1
+        r["action"] = action
+        solde = solde_final if i == n - 1 else None  # solde seulement sur la derniere ligne
+        notion_io.ecrire_reco(r, ordre=ordre, solde_propose=solde)
     print("Notion mis a jour")
 
 
