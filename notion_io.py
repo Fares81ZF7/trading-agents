@@ -197,6 +197,82 @@ def ecrire_reco(reco: dict, ordre: int, solde_propose: float | None = None):
         props["Montant proposé"] = {"number": reco["montant_propose"]}
     if reco.get("qty") is not None:
         props["Qty"] = {"number": reco["qty"]}
+    if reco.get("type"):
+        props["Type"] = {"select": {"name": reco["type"]}}
+    if reco.get("place"):
+        props["Place"] = {"rich_text": [{"text": {"content": reco["place"][:200]}}]}
     if solde_propose is not None:
         props["Solde proposé"] = {"number": round(solde_propose)}
-    notion.pages.create(parent={"type": "data_source_id", "data_source_id": ds}, properties=props)
+
+    children = _markdown_to_blocks(reco.get("detail", ""))
+    notion.pages.create(
+        parent={"type": "data_source_id", "data_source_id": ds},
+        properties=props,
+        children=children,
+    )
+
+
+def _markdown_to_blocks(md: str) -> list[dict]:
+    """Conversion minimale Markdown -> blocs Notion.
+    Gere : titres '# ', tableaux '| a | b |', et paragraphes."""
+    blocks = []
+    lignes = md.split("\n")
+    i = 0
+    while i < len(lignes):
+        ligne = lignes[i].rstrip()
+        if not ligne.strip():
+            i += 1
+            continue
+        # Titre
+        if ligne.startswith("# "):
+            blocks.append({
+                "object": "block", "type": "heading_2",
+                "heading_2": {"rich_text": [{"type": "text", "text": {"content": ligne[2:].strip()}}]},
+            })
+            i += 1
+            continue
+        # Tableau : bloc de lignes commencant par |
+        if ligne.startswith("|"):
+            tbl = []
+            while i < len(lignes) and lignes[i].strip().startswith("|"):
+                tbl.append(lignes[i].strip())
+                i += 1
+            blocks.append(_table_block(tbl))
+            continue
+        # Paragraphe
+        blocks.append({
+            "object": "block", "type": "paragraph",
+            "paragraph": {"rich_text": [{"type": "text", "text": {"content": ligne[:1900]}}]},
+        })
+        i += 1
+    return blocks
+
+
+def _cells(row: str) -> list[str]:
+    parts = [c.strip() for c in row.strip().strip("|").split("|")]
+    return parts
+
+
+def _table_block(rows: list[str]) -> dict:
+    # Retire la ligne de separation Markdown (|---|---|)
+    data = [r for r in rows if not set(r.replace("|", "").strip()) <= {"-", " ", ":"}]
+    if not data:
+        data = rows
+    largeur = max(len(_cells(r)) for r in data)
+    table_rows = []
+    for r in data:
+        cells = _cells(r)
+        cells += [""] * (largeur - len(cells))
+        table_rows.append({
+            "object": "block", "type": "table_row",
+            "table_row": {"cells": [[{"type": "text", "text": {"content": c[:1900]}}] for c in cells]},
+        })
+    return {
+        "object": "block", "type": "table",
+        "table": {
+            "table_width": largeur,
+            "has_column_header": True,
+            "has_row_header": False,
+            "children": table_rows,
+        },
+    }

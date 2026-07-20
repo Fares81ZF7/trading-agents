@@ -44,6 +44,18 @@ def main():
     candidats = scored[:TOP_CANDIDATS]
     print(f"{len(candidats)} candidats retenus apres screening")
 
+    # 3bis. Enrichissement meta (type Action/ETF + place) uniquement sur les retenus
+    for c in candidats:
+        m = technicals.meta(c["ticker"])
+        c["type"] = m["type"]
+        c["place"] = m["place"]
+        if m["nom_long"]:
+            c["nom"] = m["nom_long"]
+    for p in positions:
+        m = technicals.meta(p["ticker"])
+        p["type"] = m["type"]
+        p["place"] = m["place"]
+
     # 4. Analyse Claude
     reco = analyse.analyser(cash, candidats, positions, theses)
 

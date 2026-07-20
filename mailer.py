@@ -27,8 +27,10 @@ def _lignes(items, sens):
         qty_txt = f"{int(qty)}" if qty is not None else "-"
         out += (
             "<tr>"
-            f'<td style="padding:8px;border-bottom:1px solid #eee"><b>{it.get("ticker","")}</b><br>'
-            f'<span style="color:#6b7280;font-size:12px">{it.get("nom","")}</span></td>'
+            f'<td style="padding:8px;border-bottom:1px solid #eee"><b>{it.get("ticker","")}</b>'
+            f'<span style="color:#9ca3af;font-size:11px"> · {it.get("type","")}</span><br>'
+            f'<span style="color:#6b7280;font-size:12px">{it.get("nom","")}'
+            f'{(" · " + it.get("place","")) if it.get("place") else ""}</span></td>'
             f'<td style="padding:8px;border-bottom:1px solid #eee">{it.get("plateforme","")}</td>'
             f'<td style="padding:8px;border-bottom:1px solid #eee;color:{c};font-weight:600">{it.get("conviction","")}</td>'
             f'<td style="padding:8px;border-bottom:1px solid #eee;text-align:right">{qty_txt}</td>'

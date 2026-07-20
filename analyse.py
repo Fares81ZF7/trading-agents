@@ -35,6 +35,23 @@ Regles imperatives :
   (champ "cours", converti en euros selon "devise"), arrondi.
 - Coherence avec les theses precedentes : ne te contredis pas sans motif explicite.
 - Analyse 360 : fondamentale, technique, macro, geopolitique, sentiment.
+
+Pour CHAQUE recommandation tu produis DEUX niveaux distincts :
+1. "justification" : UNE a DEUX phrases, synthetiques, SANS chiffre ni jargon technique. Grand public.
+2. "detail" : l'argumentaire complet, chiffre, structure en 7 sections Markdown OBLIGATOIRES et dans cet ordre,
+   chaque titre precede de "# " :
+   # Thèse d'investissement
+   # Mécanisme de rendement
+   # Données chiffrées
+   # Perspective
+   # Risque (ce qui casse la thèse)
+   # Horizon et fiscalité
+   # Alternative écartée
+   La section "Données chiffrées" est un tableau Markdown reprenant : cours actuel, devise native,
+   variation 1 mois / 3 mois / 1 an, RSI 14j, position vs MM50 et MM200, distance au plus-haut et
+   plus-bas 52 semaines, quantite proposee, montant engage, plateforme, conviction.
+   Utilise les indicateurs fournis. Fiscalite : compte-titres DEGIRO ou Shares, PFU 30 pourcent.
+Tu fournis aussi pour chaque ligne "type" (Action ou ETF) et "place" (bourse de cotation), depuis les donnees fournies.
 Utilise l'outil web_search si besoin, puis appelle IMPERATIVEMENT l'outil enregistrer_recommandations
 pour livrer ta reponse finale."""
 
@@ -55,9 +72,12 @@ TOOL = {
                         "conviction": {"type": "string", "enum": ["Faible", "Moyenne", "Forte"]},
                         "montant_propose": {"type": "integer"},
                         "qty": {"type": "integer"},
+                        "type": {"type": "string", "enum": ["Action", "ETF"]},
+                        "place": {"type": "string"},
                         "justification": {"type": "string"},
+                        "detail": {"type": "string"},
                     },
-                    "required": ["ticker", "plateforme", "conviction", "montant_propose", "qty", "justification"],
+                    "required": ["ticker", "plateforme", "conviction", "montant_propose", "qty", "type", "place", "justification", "detail"],
                 },
             },
             "ventes": {
@@ -71,9 +91,12 @@ TOOL = {
                         "conviction": {"type": "string", "enum": ["Faible", "Moyenne", "Forte"]},
                         "montant_propose": {"type": "integer"},
                         "qty": {"type": "integer"},
+                        "type": {"type": "string", "enum": ["Action", "ETF"]},
+                        "place": {"type": "string"},
                         "justification": {"type": "string"},
+                        "detail": {"type": "string"},
                     },
-                    "required": ["ticker", "plateforme", "conviction", "montant_propose", "qty", "justification"],
+                    "required": ["ticker", "plateforme", "conviction", "montant_propose", "qty", "type", "place", "justification", "detail"],
                 },
             },
             "synthese_macro": {"type": "string"},

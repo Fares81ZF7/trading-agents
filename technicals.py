@@ -47,6 +47,7 @@ def indicateurs(ticker: str) -> dict | None:
             "devise": _devise(ticker),
             "var_1m_pct": _var(21),
             "var_3m_pct": _var(63),
+            "var_1an_pct": _var(252),
             "rsi14": _rsi(closes),
             "vs_mm50_pct": round((dernier / mm50 - 1) * 100, 1) if mm50 else None,
             "vs_mm200_pct": round((dernier / mm200 - 1) * 100, 1) if mm200 else None,
@@ -55,6 +56,21 @@ def indicateurs(ticker: str) -> dict | None:
         }
     except Exception:
         return None
+
+
+def meta(ticker: str) -> dict:
+    """Type (Action/ETF), place de cotation et nom long via yfinance.
+    Best effort : renvoie des valeurs par defaut si l'info manque."""
+    out = {"type": "Action", "place": "", "nom_long": ""}
+    try:
+        info = yf.Ticker(ticker).info or {}
+        qtype = (info.get("quoteType") or "").upper()
+        out["type"] = "ETF" if qtype == "ETF" else "Action"
+        out["place"] = info.get("fullExchangeName") or info.get("exchange") or ""
+        out["nom_long"] = info.get("longName") or info.get("shortName") or ""
+    except Exception:
+        pass
+    return out
 
 
 def _devise(ticker: str) -> str:
