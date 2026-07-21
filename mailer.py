@@ -1,16 +1,18 @@
 """
-Construction du rapport HTML et envoi via SMTP Yahoo.
+Construction du rapport HTML et envoi via SMTP Gmail.
 """
 
 import os
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from email.utils import formataddr
 from datetime import date
 
-YAHOO_USER = os.environ["YAHOO_USER"]          # feh.blidi@yahoo.fr
-YAHOO_APP_PASSWORD = os.environ["YAHOO_APP_PASSWORD"]
+SMTP_USER = os.environ["YAHOO_USER"]          # fh.blidi@gmail.com (nom de secret conserve)
+SMTP_APP_PASSWORD = os.environ["YAHOO_APP_PASSWORD"]
 DEST = os.environ.get("MAIL_DEST", "fh.blidi@gmail.com")
+EXPEDITEUR_NOM = "AIA Trader"
 
 COUL = {"Forte": "#1a7f37", "Moyenne": "#b58105", "Faible": "#6b7280"}
 
@@ -81,9 +83,9 @@ Recommandations tracees dans Notion (base Agent Trading - Suivi).</div>
 def envoyer(html: str):
     msg = MIMEMultipart("alternative")
     msg["Subject"] = f"Rapport Poche 2 - {date.today().strftime('%d/%m/%Y')}"
-    msg["From"] = YAHOO_USER
+    msg["From"] = formataddr((EXPEDITEUR_NOM, SMTP_USER))
     msg["To"] = DEST
     msg.attach(MIMEText(html, "html", "utf-8"))
-    with smtplib.SMTP_SSL("smtp.mail.yahoo.com", 465) as s:
-        s.login(YAHOO_USER, YAHOO_APP_PASSWORD)
-        s.sendmail(YAHOO_USER, [DEST], msg.as_string())
+    with smtplib.SMTP_SSL("smtp.gmail.com", 465) as s:
+        s.login(SMTP_USER, SMTP_APP_PASSWORD)
+        s.sendmail(SMTP_USER, [DEST], msg.as_string())
