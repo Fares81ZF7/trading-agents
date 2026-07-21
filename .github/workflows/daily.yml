@@ -5,7 +5,7 @@ on:
     # 7h00 Europe/Paris = 05h00 UTC (ete) / 06h00 UTC (hiver).
     # GitHub Actions ne gere pas les fuseaux : on met 05h00 UTC.
     # En hiver (heure d'hiver), le rapport arrivera a 6h00 Paris.
-    - cron: "0 6 * * *"
+    - cron: "54 5 * * *"
   workflow_dispatch:  # permet un lancement manuel depuis l'onglet Actions
 
 jobs:
