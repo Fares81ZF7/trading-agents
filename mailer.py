@@ -9,9 +9,9 @@ from email.mime.text import MIMEText
 from email.utils import formataddr
 from datetime import date
 
-SMTP_USER = os.environ["YAHOO_USER"]          # fh.blidi@gmail.com (nom de secret conserve)
+SMTP_USER = os.environ["YAHOO_USER"]          # adresse expeditrice (secret)
 SMTP_APP_PASSWORD = os.environ["YAHOO_APP_PASSWORD"]
-DEST = os.environ.get("MAIL_DEST", "fh.blidi@gmail.com")
+DEST = os.environ["MAIL_DEST"]                 # destinataire (secret)
 EXPEDITEUR_NOM = "AIA Trader"
 
 COUL = {"Forte": "#1a7f37", "Moyenne": "#b58105", "Faible": "#6b7280"}
