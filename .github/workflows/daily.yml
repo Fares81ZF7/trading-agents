@@ -2,9 +2,8 @@ name: Rapport quotidien Poche 2
 
 on:
   schedule:
-    # 7h00 Europe/Paris = 05h00 UTC (ete) / 06h00 UTC (hiver).
-    # GitHub Actions ne gere pas les fuseaux : on met 05h00 UTC.
-    # En hiver (heure d'hiver), le rapport arrivera a 6h00 Paris.
+    # 5h54 UTC = 7h54 Paris en heure d'ete (8h54... non : 7h54).
+    # En heure d'hiver, repasser a "54 6 * * *" pour rester a 7h54 Paris.
     - cron: "54 5 * * *"
   workflow_dispatch:  # permet un lancement manuel depuis l'onglet Actions
 
@@ -26,6 +25,7 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
           NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
+          NOTION_CONFIG_DB_ID: ${{ secrets.NOTION_CONFIG_DB_ID }}
           YAHOO_USER: ${{ secrets.YAHOO_USER }}
           YAHOO_APP_PASSWORD: ${{ secrets.YAHOO_APP_PASSWORD }}
           MAIL_DEST: ${{ secrets.MAIL_DEST }}
