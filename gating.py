@@ -39,8 +39,9 @@ def _config_db_source_id() -> str | None:
 
 
 def lire_config() -> dict:
-    """Lit la ligne de config. Retourne agent_actif (bool) + fenetre de pause."""
-    out = {"agent_actif": True, "pause_du": None, "pause_au": None}
+    """Lit la ligne de config : agent actif, fenetre de pause, dernier run, page_id."""
+    out = {"agent_actif": True, "pause_du": None, "pause_au": None,
+           "dernier_run": None, "page_id": None}
     ds = _config_db_source_id()
     if not ds:
         return out
@@ -48,16 +49,31 @@ def lire_config() -> dict:
         resp = notion.data_sources.query(data_source_id=ds, page_size=1)
         if not resp["results"]:
             return out
-        p = resp["results"][0]["properties"]
+        page = resp["results"][0]
+        out["page_id"] = page["id"]
+        p = page["properties"]
         actif = p.get("Agent actif", {}).get("checkbox")
         out["agent_actif"] = bool(actif) if actif is not None else True
         du = p.get("Pause du", {}).get("date")
         au = p.get("Pause au", {}).get("date")
+        dr = p.get("Dernier run", {}).get("date")
         out["pause_du"] = du["start"] if du else None
         out["pause_au"] = au["start"] if au else None
+        out["dernier_run"] = dr["start"][:10] if dr else None
     except Exception:
         pass
     return out
+
+
+def marquer_run(page_id: str, jour: dt.date):
+    """Ecrit la date du run dans la config : verrou anti-doublon."""
+    try:
+        notion.pages.update(
+            page_id=page_id,
+            properties={"Dernier run": {"date": {"start": jour.isoformat()}}},
+        )
+    except Exception:
+        pass
 
 
 def en_pause(cfg: dict, jour: dt.date) -> bool:
@@ -106,5 +122,16 @@ def decision() -> dict:
     zones = places_ouvertes(jour)
     if not zones:
         return {"run": False, "raison": "Jour ferie sur toutes les places suivies.", "zones_ouvertes": []}
+
+    # VERROU ANTI-DOUBLON : un seul run par jour, quel que soit le nombre
+    # de declenchements (cron GitHub, ordonnanceur externe, lancement manuel).
+    if cfg.get("dernier_run") == jour.isoformat():
+        return {"run": False, "raison": f"Run deja effectue aujourd'hui ({jour.isoformat()}).",
+                "zones_ouvertes": []}
+
+    # On marque le run AVANT l'analyse : si deux declencheurs arrivent en meme temps,
+    # le second verra la date deja posee et s'arretera.
+    if cfg.get("page_id"):
+        marquer_run(cfg["page_id"], jour)
 
     return {"run": True, "raison": "", "zones_ouvertes": zones}
