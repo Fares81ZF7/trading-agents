@@ -52,15 +52,6 @@ def construire_html(reco: dict, cash: dict) -> str:
 <div style="background:#f3f4f6;padding:8px 12px;border-radius:6px;margin-bottom:18px;font-size:14px">
 Cash disponible : {cash_txt}</div>
 
-<h3 style="color:#1a7f37;margin-bottom:6px">Achats (max 5)</h3>
-<table style="border-collapse:collapse;width:100%;font-size:14px;margin-bottom:22px">
-<tr style="background:#f9fafb;text-align:left">
-<th style="padding:8px">Valeur</th><th style="padding:8px">Plateforme</th>
-<th style="padding:8px">Conviction</th><th style="padding:8px;text-align:right">Qté</th><th style="padding:8px;text-align:right">Montant</th>
-<th style="padding:8px">Justification</th></tr>
-{_lignes(reco.get("achats", []), "d'achat")}
-</table>
-
 <h3 style="color:#b91c1c;margin-bottom:6px">Ventes / arbitrages (max 5)</h3>
 <table style="border-collapse:collapse;width:100%;font-size:14px;margin-bottom:22px">
 <tr style="background:#f9fafb;text-align:left">
@@ -68,6 +59,15 @@ Cash disponible : {cash_txt}</div>
 <th style="padding:8px">Conviction</th><th style="padding:8px;text-align:right">Qté</th><th style="padding:8px;text-align:right">Montant</th>
 <th style="padding:8px">Justification</th></tr>
 {_lignes(reco.get("ventes", []), "de vente")}
+</table>
+
+<h3 style="color:#1a7f37;margin-bottom:6px">Achats (max 5)</h3>
+<table style="border-collapse:collapse;width:100%;font-size:14px;margin-bottom:22px">
+<tr style="background:#f9fafb;text-align:left">
+<th style="padding:8px">Valeur</th><th style="padding:8px">Plateforme</th>
+<th style="padding:8px">Conviction</th><th style="padding:8px;text-align:right">Qté</th><th style="padding:8px;text-align:right">Montant</th>
+<th style="padding:8px">Justification</th></tr>
+{_lignes(reco.get("achats", []), "d'achat")}
 </table>
 
 <h3 style="margin-bottom:6px">Contexte marche</h3>
