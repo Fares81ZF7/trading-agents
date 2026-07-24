@@ -59,18 +59,48 @@ def indicateurs(ticker: str) -> dict | None:
 
 
 def meta(ticker: str) -> dict:
-    """Type (Action/ETF), place de cotation et nom long via yfinance.
-    Best effort : renvoie des valeurs par defaut si l'info manque."""
-    out = {"type": "Action", "place": "", "nom_long": ""}
+    """Type (Action/ETF), place de cotation, nom long et devise reelle via yfinance."""
+    out = {"type": "Action", "place": "", "nom_long": "", "devise_reelle": ""}
     try:
         info = yf.Ticker(ticker).info or {}
         qtype = (info.get("quoteType") or "").upper()
         out["type"] = "ETF" if qtype == "ETF" else "Action"
         out["place"] = info.get("fullExchangeName") or info.get("exchange") or ""
         out["nom_long"] = info.get("longName") or info.get("shortName") or ""
+        out["devise_reelle"] = info.get("currency") or ""
     except Exception:
         pass
     return out
+
+
+_FX_CACHE = {}
+
+
+def taux_vers_eur(devise: str) -> float | None:
+    """Taux de conversion 1 unite de <devise> -> EUR.
+    Gere le cas GBp (pence londoniens) : 1 GBp = 0,01 GBP."""
+    if not devise:
+        return None
+    d = devise.strip()
+    if d.upper() == "EUR":
+        return 1.0
+    if d in _FX_CACHE:
+        return _FX_CACHE[d]
+
+    facteur = 1.0
+    code = d.upper()
+    if d == "GBp" or code == "GBX":   # cotation en pence
+        code = "GBP"
+        facteur = 0.01
+
+    try:
+        px = yf.Ticker(f"{code}EUR=X").history(period="5d", interval="1d")["Close"].dropna()
+        taux = float(px.iloc[-1]) * facteur if not px.empty else None
+    except Exception:
+        taux = None
+
+    _FX_CACHE[d] = taux
+    return taux
 
 
 def saisonnalite(ticker: str) -> dict:

@@ -16,6 +16,20 @@ TOP_CANDIDATS = 8  # nb de candidats achat envoyes a Claude apres screening mome
 _ORDRE_CONVICTION = {"Forte": 3, "Moyenne": 2, "Faible": 1}
 
 
+def _recalculer_montants(items: list[dict], ref_cours: dict):
+    """Recalcule montant_propose = qty x cours converti en euros.
+    Si le cours ou le taux de change est indisponible, on laisse la valeur du modele."""
+    for it in items:
+        cours, devise = ref_cours.get(it.get("ticker"), (None, None))
+        qty = it.get("qty")
+        if not cours or not qty:
+            continue
+        taux = technicals.taux_vers_eur(devise) if devise else 1.0
+        if not taux:
+            continue
+        it["montant_propose"] = int(round(qty * cours * taux))
+
+
 def _borne_achats(achats: list[dict], ventes: list[dict], cash: dict) -> list[dict]:
     """Borne les achats par le cash projete de CHAQUE plateforme.
     cash projete = cash actuel + somme des ventes proposees sur la plateforme.
@@ -116,11 +130,13 @@ def main():
         if m["nom_long"]:
             c["nom"] = m["nom_long"]
         c["saisonnalite"] = technicals.saisonnalite(c["ticker"])
+        c["devise_reelle"] = m["devise_reelle"]
     for p in positions:
         m = technicals.meta(p["ticker"])
         p["type"] = m["type"]
         p["place"] = m["place"]
         p["saisonnalite"] = technicals.saisonnalite(p["ticker"])
+        p["devise_reelle"] = m["devise_reelle"]
 
     # 4. Analyse Claude
     reco = analyse.analyser(cash, candidats, positions, theses)
@@ -128,6 +144,16 @@ def main():
     # 5. Plafonnement de securite a 5 (au cas ou)
     reco["achats"] = (reco.get("achats") or [])[:5]
     reco["ventes"] = (reco.get("ventes") or [])[:5]
+
+    # 5-pre. RECALCUL DETERMINISTE DES MONTANTS :
+    #   montant = qty x cours de cloture (converti en euros).
+    #   Evite tout ecart d'arrondi ou de conversion de la part du modele.
+    ref_cours = {}
+    for src in (candidats, positions):
+        for x in src:
+            ref_cours[x["ticker"]] = (x.get("cours"), x.get("devise_reelle"))
+    _recalculer_montants(reco["ventes"], ref_cours)
+    _recalculer_montants(reco["achats"], ref_cours)
 
     # 5bis. GARDE-FOU CASH (deterministe, non negociable) :
     #   cash projete par plateforme = cash actuel + ventes proposees de cette plateforme.
